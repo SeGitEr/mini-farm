@@ -1,29 +1,110 @@
 const game = {
   selectedCrop: 'wheat',
   selectedBuild: null,
-  mode: 'plant', // 'plant' или 'build'
-  unlockedCells: 25, // Начинаем с 25 клеток (5x5)
+  mode: 'plant', // 'plant', 'build', 'select'
+  unlockedCells: 25,
+  selectedCells: [], // Массив выбранных клеток
 
   init() {
     this.renderShop();
     this.loop();
     this.updateLandButton();
+    this.updateModeButtons();
   },
 
-  // Переключение режима (Сажаем или Строим)
+  // Переключение режимов
   setMode(mode) {
     this.mode = mode;
-    showToast(mode === 'plant' ? '🌱 Режим посадки' : '🔨 Режим стройки');
+    this.selectedCells = []; // Сброс выделения при смене режима
     
-    // Обновляем вид кнопок режима (визуально)
+    const messages = {
+      'plant': '🌱 Режим посадки',
+      'build': '🔨 Режим стройки',
+      'select': '📋 Выбери грядки (клик)'
+    };
+    
+    showToast(messages[mode]);
+    this.updateModeButtons();
+    this.renderGrid();
+  },
+
+  // Массовый сбор урожая
+  harvestAll() {
+    let harvested = 0;
+    let totalEarnings = 0;
+    
+    state.data.cells.forEach((cell, index) => {
+      if (cell && cell.type !== 'building') {
+        const cropConfig = CONFIG.crops[cell.type];
+        if (cropConfig) {
+          const elapsed = (Date.now() - cell.plantedAt) / 1000;
+          if (elapsed >= cropConfig.time) {
+            // Созрело - собираем
+            state.data.coins += cropConfig.sell;
+            state.data.cells[index] = null;
+            harvested++;
+            totalEarnings += cropConfig.sell;
+          }
+        }
+      }
+    });
+    
+    if (harvested > 0) {
+      state.save();
+      this.renderGrid();
+      showToast(`🌾 Собрано: ${harvested} шт. (+${totalEarnings}💰)`);
+    } else {
+      showToast('⏳ Нечего собирать');
+    }
+  },
+
+  // Посадка на выбранных клетках
+  plantSelected() {
+    if (this.selectedCells.length === 0) {
+      showToast('⚠️ Выбери грядки сначала');
+      return;
+    }
+
+    const cropConfig = CONFIG.crops[this.selectedCrop];
+    const totalCost = cropConfig.cost * this.selectedCells.length;
+
+    if (state.data.coins >= totalCost) {
+      state.data.coins -= totalCost;
+      
+      this.selectedCells.forEach(index => {
+        if (!state.data.cells[index]) {
+          state.data.cells[index] = { 
+            type: this.selectedCrop, 
+            plantedAt: Date.now() 
+          };
+        }
+      });
+      
+      state.save();
+      this.selectedCells = [];
+      this.renderGrid();
+      showToast(`🌱 Посажено: ${this.selectedCells.length} ${cropConfig.icon}`);
+    } else {
+      showToast(`❌ Нужно ${totalCost}💰 (не хватает)`);
+    }
+  },
+
+  updateModeButtons() {
     const btnPlant = document.getElementById('modePlantBtn');
     const btnBuild = document.getElementById('modeBuildBtn');
+    const btnSelect = document.getElementById('modeSelectBtn');
     
-    if(btnPlant && btnBuild) {
-      btnPlant.style.background = mode === 'plant' ? 'var(--accent)' : '#e5e7eb';
-      btnPlant.style.color = mode === 'plant' ? 'white' : '#222';
-      btnBuild.style.background = mode === 'build' ? 'var(--accent)' : '#e5e7eb';
-      btnBuild.style.color = mode === 'build' ? 'white' : '#222';
+    if (btnPlant) {
+      btnPlant.style.background = this.mode === 'plant' ? 'var(--accent)' : '#e5e7eb';
+      btnPlant.style.color = this.mode === 'plant' ? 'white' : '#222';
+    }
+    if (btnBuild) {
+      btnBuild.style.background = this.mode === 'build' ? 'var(--accent)' : '#e5e7eb';
+      btnBuild.style.color = this.mode === 'build' ? 'white' : '#222';
+    }
+    if (btnSelect) {
+      btnSelect.style.background = this.mode === 'select' ? 'var(--accent)' : '#e5e7eb';
+      btnSelect.style.color = this.mode === 'select' ? 'white' : '#222';
     }
   },
 
@@ -32,25 +113,23 @@ const game = {
     if (!list) return;
     list.innerHTML = '';
 
-    // Если режим посадки - показываем семена
     if (this.mode === 'plant') {
       for (const [key, val] of Object.entries(CONFIG.crops)) {
         const div = document.createElement('div');
         div.className = 'shop-item';
         div.innerHTML = `
-          <span>${val.icon} ${key} (${val.time}с)</span>
+          <span>${val.icon} ${val.name}</span>
+          <div style="font-size: 12px; color: #888;">${val.time}с | +${val.sell}💰</div>
           <button class="btn-vk primary" onclick="game.selectCrop('${key}', this)">${val.cost} 💰</button>
         `;
         list.appendChild(div);
       }
-    } 
-    // Если режим стройки - показываем заборы/деревья
-    else {
+    } else if (this.mode === 'build') {
       for (const [key, val] of Object.entries(CONFIG.buildings)) {
         const div = document.createElement('div');
         div.className = 'shop-item';
         div.innerHTML = `
-          <span>${val.icon} ${key}</span>
+          <span>${val.icon} ${val.name}</span>
           <button class="btn-vk primary" onclick="game.selectBuild('${key}', this)">${val.cost} 💰</button>
         `;
         list.appendChild(div);
@@ -61,15 +140,20 @@ const game = {
   selectCrop(crop, btn) {
     this.selectedCrop = crop;
     this.selectedBuild = null;
-    document.getElementById('shopModal').style.display = 'none';
-    showToast(`Выбрано: ${CONFIG.crops[crop].icon} ${crop}`);
+    
+    if (this.mode === 'select') {
+      this.plantSelected();
+    } else {
+      document.getElementById('shopModal').style.display = 'none';
+      showToast(`Выбрано: ${CONFIG.crops[crop].icon} ${CONFIG.crops[crop].name}`);
+    }
   },
 
   selectBuild(build, btn) {
     this.selectedBuild = build;
     this.selectedCrop = null;
     document.getElementById('shopModal').style.display = 'none';
-    showToast(`Выбрано: ${CONFIG.buildings[build].icon} ${build}`);
+    showToast(`Выбрано: ${CONFIG.buildings[build].icon} ${CONFIG.buildings[build].name}`);
   },
 
   showShop() { document.getElementById('shopModal').style.display = 'flex'; },
@@ -77,12 +161,11 @@ const game = {
     if (!e.target.classList.contains('modal-card')) document.getElementById('shopModal').style.display = 'none'; 
   },
 
-  // Покупка новой земли
   buyLand() {
-    const landCost = 100; // Цена за 5 новых клеток
+    const landCost = 100;
     if (state.data.coins >= landCost) {
       state.data.coins -= landCost;
-      this.unlockedCells += 5; // Добавляем ряд
+      this.unlockedCells += 5;
       state.save();
       this.renderGrid();
       this.updateLandButton();
@@ -101,32 +184,47 @@ const game = {
   },
 
   handleCellClick(index) {
-    const cell = state.data.cells[index];
+    // Режим ВЫДЕЛЕНИЯ
+    if (this.mode === 'select') {
+      const cell = state.data.cells[index];
+      
+      // Можно выделить только пустую клетку
+      if (!cell) {
+        const cellIndex = this.selectedCells.indexOf(index);
+        if (cellIndex > -1) {
+          this.selectedCells.splice(cellIndex, 1); // Убрать выделение
+        } else {
+          this.selectedCells.push(index); // Добавить выделение
+        }
+        this.renderGrid();
+        showToast(`📋 Выбрано: ${this.selectedCells.length} грядок`);
+      }
+      return;
+    }
 
-    // 1. Логика СТРОЙКИ (заборы, декор)
+    // Режим СТРОЙКИ
     if (this.mode === 'build') {
+      const cell = state.data.cells[index];
       if (!cell) {
         const buildKey = this.selectedBuild;
         if (buildKey) {
           const buildData = CONFIG.buildings[buildKey];
           if (state.data.coins >= buildData.cost) {
             state.data.coins -= buildData.cost;
-            // Сохраняем как постройку (без таймера)
-            state.data.cells[index] = { type: 'building', subtype: buildKey }; 
+            state.data.cells[index] = { type: 'building', subtype: buildKey };
             state.save();
             this.renderGrid();
           } else { showToast('❌ Нет монет'); }
         } else { showToast('⚠️ Выбери постройку в магазине'); }
       } else {
-        // Если кликнули на занятую клетку в режиме стройки - можно снести? (пока просто сообщение)
         showToast('🚧 Тут уже что-то стоит');
       }
       return;
     }
 
-    // 2. Логика ПОСАДКИ (растения)
+    // Режим ПОСАДКИ (одиночной)
+    const cell = state.data.cells[index];
     if (!cell) {
-      // Сажаем
       const cropConfig = CONFIG.crops[this.selectedCrop];
       if (state.data.coins >= cropConfig.cost) {
         state.data.coins -= cropConfig.cost;
@@ -135,15 +233,14 @@ const game = {
         this.renderGrid();
       } else { showToast('❌ Нет монет'); }
     } else {
-      // Собираем урожай
-      if (cell.type === 'building') return; // Нельзя собрать забор
+      if (cell.type === 'building') return;
 
       const cropConfig = CONFIG.crops[cell.type];
       if (cropConfig) {
         const elapsed = (Date.now() - cell.plantedAt) / 1000;
         if (elapsed >= cropConfig.time) {
           state.data.coins += cropConfig.sell;
-          state.data.cells[index] = null; // Убираем растение
+          state.data.cells[index] = null;
           state.save();
           this.renderGrid();
           showToast(`💰 +${cropConfig.sell}`);
@@ -158,33 +255,30 @@ const game = {
     const grid = document.getElementById('grid');
     if (!grid) return;
     
-    // Динамическое изменение колонок в зависимости от количества клеток
-    // Для простоты пока оставим 5 колонок, но добавим больше рядов вниз
     grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
-    
     grid.innerHTML = '';
+    
     const coinCount = document.getElementById('coinCount');
     if (coinCount) coinCount.textContent = state.data.coins;
 
-    // Рендерим только unlockedCells
     for (let i = 0; i < this.unlockedCells; i++) {
       const cell = state.data.cells[i];
       const div = document.createElement('div');
       div.className = 'cell';
       
-      // Если клетка пустая
+      // Подсветка ВЫДЕЛЕННЫХ клеток
+      if (this.selectedCells.includes(i)) {
+        div.style.boxShadow = '0 0 0 3px #10b981, inset 2px 2px 4px rgba(255,255,255,0.4)';
+        div.style.background = 'rgba(16, 185, 129, 0.3)';
+      }
+      
       if (!cell) {
         div.classList.add('empty');
-      } 
-      // Если это ПОСТРОЙКА (забор/дерево)
-      else if (cell.type === 'building') {
+      } else if (cell.type === 'building') {
         const buildData = CONFIG.buildings[cell.subtype];
         div.classList.add('filled');
-        // Для построек используем простой эмодзи, так как они статичные
         div.innerHTML = `<div style="font-size: 30px;">${buildData.icon}</div>`;
-      } 
-      // Если это РАСТЕНИЕ
-      else {
+      } else {
         const cropConfig = CONFIG.crops[cell.type];
         if (!cropConfig) continue;
         
@@ -227,7 +321,6 @@ const game = {
       grid.appendChild(div);
     }
     
-    // Обновляем кнопку покупки земли
     this.updateLandButton();
   },
 
