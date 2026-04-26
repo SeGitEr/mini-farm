@@ -1,284 +1,229 @@
 /* style.css */
 
-/* 1. ПЕРЕМЕННЫЕ (Цветовая палитра) */
 :root {
-  /* Базовые цвета VK */
-  --bg-color: #edeef0;       /* Серый фон приложения */
-  --card-bg: #ffffff;        /* Белый цвет карточек */
-  --text-primary: #000000;   /* Основной текст */
-  --text-secondary: #818c99; /* Вторичный текст */
-  --accent: #0077ff;         /* Синий цвет кнопок VK */
-  --success: #4bb34b;        /* Зеленый (рост, деньги) */
-  --warning: #ff9800;        /* Оранжевый (реклама) */
-  --danger: #ff3347;         /* Красный (сброс) */
-
-  /* Цвета фермы */
-  --soil-color: #a3825a;     /* Цвет земли */
-  --soil-shadow: #826748;    /* Тень внутри клетки */
+  --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%); /* Небо и трава */
+  --panel-bg: #fff8e1; /* Теплый фон панели */
+  --soil-light: #d7ccc8;
+  --soil-dark: #8d6e63;
+  --wood-frame: #ffe0b2;
+  --text-main: #1f2937;
+  --accent: #10b981; /* Приятный зеленый */
+  --accent-dark: #059669;
 }
 
-/* 2. БАЗОВЫЕ НАСТРОЙКИ И АДАПТИВ */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
-  background-color: var(--bg-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-gradient);
   margin: 0;
-  /* Отступы под "челку" и нижнюю панель навигации на iPhone */
-  padding: 10px;
-  padding-top: calc(10px + env(safe-area-inset-top));
-  padding-bottom: calc(10px + env(safe-area-inset-bottom));
-  
-  font-family: -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  color: var(--text-primary);
-  
-  /* Чтобы приложение не скроллилось как сайт и нельзя было выделять текст */
-  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 10px;
+  color: var(--text-main);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 3. ШАПКА (Header) */
+/* 🏷️ Заголовок с монеткой */
 .header {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 12px 16px;
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 14px 20px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  margin-bottom: 12px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255,255,255,0.5);
 }
 
 .balance {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text-primary);
+  gap: 8px;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--text-main);
 }
 
 .coin-icon {
-  width: 22px;
-  height: 22px;
-  fill: #ffb300; /* Золотой цвет монеты */
+  width: 26px;
+  height: 26px;
+  fill: #fbbf24;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
 }
 
-/* 4. КОНТЕЙНЕР ФЕРМЫ И СЕТКА */
+/* 🏡 Панель фермы (деревянная рамка) */
 .farm-container {
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  max-width: 400px;
-  margin: 0 auto;
+  background: var(--panel-bg);
+  padding: 16px;
+  border-radius: 24px;
+  box-shadow: 
+    0 10px 30px rgba(0,0,0,0.1),
+    inset 0 0 0 4px var(--wood-frame); /* Рамка */
+  max-width: 380px;
+  width: 100%;
 }
 
+/* 🌱 Сетка */
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr); /* 5 колонок */
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
-/* Клетка грядки */
+/* 🟫 Клетка земли */
 .cell {
-  background: var(--soil-color);
-  border-radius: 10px;
-  aspect-ratio: 1; /* Делает клетку квадратной */
+  /* Эффект объемной земли */
+  background: radial-gradient(circle at 30% 30%, var(--soil-light), var(--soil-dark));
+  border-radius: 14px;
+  aspect-ratio: 1;
   position: relative;
+  box-shadow: 
+    inset 2px 2px 4px rgba(255,255,255,0.4), 
+    inset -2px -2px 4px rgba(0,0,0,0.3);
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  transition: transform 0.1s ease;
-  /* Внутренняя тень для эффекта "ямки" */
-  box-shadow: inset 0 -4px 0 var(--soil-shadow);
-  overflow: hidden;
 }
 
-.cell:active {
-  transform: scale(0.94); /* Эффект нажатия */
-  background: #b59268;
-}
+.cell:active { transform: scale(0.92); }
 
+/* Плюсик для пустой клетки */
 .cell.empty::after {
   content: '+';
-  color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.4);
   font-size: 24px;
+  font-weight: 300;
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 50%; left: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* 5. РАСТЕНИЯ (SVG) И АНИМАЦИИ */
+/* 🌿 Растения */
 .plant-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
 }
 
 .plant-svg {
-  width: 75%;
-  height: 75%;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Пружинистая анимация */
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.2));
+  width: 70%; height: 70%;
+  filter: drop-shadow(0 4px 3px rgba(0,0,0,0.3));
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Анимация для готового растения */
 .plant-svg.grown {
-  animation: bounce 1.5s infinite ease-in-out;
+  animation: bounce 2s infinite ease-in-out;
 }
 
 @keyframes bounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15) rotate(5deg); }
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(3deg); }
 }
 
-/* 6. ПОЛОСА ПРОГРЕССА */
+/* 📊 Прогресс-бар */
 .progress-bar {
   position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70%;
-  height: 4px;
-  background: rgba(0,0,0,0.25);
-  border-radius: 2px;
+  bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 70%; height: 6px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--success), #8bc34a);
+  background: linear-gradient(90deg, #4ade80, #22c55e);
   width: 0%;
   transition: width 0.4s linear;
 }
 
-/* 7. КНОПКИ И УПРАВЛЕНИЕ */
+/* 🔘 Кнопки */
 .controls {
   display: flex;
-  gap: 10px;
-  margin-top: 16px;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
+  gap: 12px;
+  margin-top: 20px;
+  width: 100%;
+  max-width: 380px;
 }
 
 .btn-vk {
   flex: 1;
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: 16px;
+  font-weight: 700;
   font-size: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: opacity 0.2s, transform 0.1s;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.btn-vk:active {
-  transform: scale(0.96);
-}
-
-/* Стили для разных типов кнопок */
 .btn-vk.primary {
   background: var(--accent);
   color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
+.btn-vk.primary:active { background: var(--accent-dark); transform: translateY(2px); }
 
 .btn-vk.secondary {
-  background: #e5e7eb;
-  color: #222;
+  background: white;
+  color: #64748b;
 }
+.btn-vk.secondary:active { background: #f1f5f9; transform: translateY(2px); }
 
-.btn-vk.warning {
-  background: var(--warning);
-  color: white;
-}
-
-.btn-vk:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-/* 8. МОДАЛЬНОЕ ОКНО (Магазин) */
+/* 🛒 Модальное окно */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.4);
-  backdrop-filter: blur(5px); /* Размытие фона */
+  backdrop-filter: blur(4px);
   display: none;
-  align-items: center;
-  justify-content: center;
+  align-items: center; justify-content: center;
   z-index: 100;
   padding: 20px;
 }
 
 .modal-card {
-  background: var(--card-bg);
-  width: 100%;
-  max-width: 320px;
-  border-radius: 20px;
+  background: white;
+  width: 100%; max-width: 340px;
+  border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
   text-align: center;
 }
 
 .shop-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #eee;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.shop-item:last-child {
-  border-bottom: none;
-}
-
-/* 9. TOAST-УВЕДОМЛЕНИЯ (Всплывашки) */
+/* 🍞 Тосты */
 #toast-container {
-  position: fixed;
-  bottom: calc(20px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: center;
-  width: 90%;
-  pointer-events: none; /* Чтобы клики проходили сквозь контейнер */
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  z-index: 200; display: flex; flex-direction: column; gap: 8px;
 }
 
 .toast {
-  background: rgba(30, 30, 30, 0.9);
+  background: rgba(15, 23, 42, 0.9);
   color: white;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 30px;
   font-size: 14px;
   font-weight: 500;
-  text-align: center;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  
-  /* Анимации появления и исчезновения */
-  animation: slideUp 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: slideUp 0.3s, fadeOut 0.3s 2.7s forwards;
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fadeOut {
-  to { opacity: 0; transform: translateY(-10px); }
-}
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { to { opacity: 0; } }
