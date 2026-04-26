@@ -3,19 +3,20 @@ const game = {
   selectedBuild: null,
   mode: 'plant', // 'plant', 'build', 'select'
   unlockedCells: 25,
-  selectedCells: [], // Массив выбранных клеток
+  selectedCells: [],
 
   init() {
+    console.log('Game initialized');
     this.renderShop();
     this.loop();
     this.updateLandButton();
     this.updateModeButtons();
   },
 
-  // Переключение режимов
   setMode(mode) {
+    console.log('Switching to mode:', mode);
     this.mode = mode;
-    this.selectedCells = []; // Сброс выделения при смене режима
+    this.selectedCells = [];
     
     const messages = {
       'plant': '🌱 Режим посадки',
@@ -28,8 +29,8 @@ const game = {
     this.renderGrid();
   },
 
-  // Массовый сбор урожая
   harvestAll() {
+    console.log('Harvest all clicked');
     let harvested = 0;
     let totalEarnings = 0;
     
@@ -39,7 +40,6 @@ const game = {
         if (cropConfig) {
           const elapsed = (Date.now() - cell.plantedAt) / 1000;
           if (elapsed >= cropConfig.time) {
-            // Созрело - собираем
             state.data.coins += cropConfig.sell;
             state.data.cells[index] = null;
             harvested++;
@@ -58,14 +58,19 @@ const game = {
     }
   },
 
-  // Посадка на выбранных клетках
   plantSelected() {
+    console.log('Plant selected, count:', this.selectedCells.length);
     if (this.selectedCells.length === 0) {
       showToast('⚠️ Выбери грядки сначала');
       return;
     }
 
     const cropConfig = CONFIG.crops[this.selectedCrop];
+    if (!cropConfig) {
+      showToast('⚠️ Выбери культуру');
+      return;
+    }
+    
     const totalCost = cropConfig.cost * this.selectedCells.length;
 
     if (state.data.coins >= totalCost) {
@@ -80,10 +85,11 @@ const game = {
         }
       });
       
+      const count = this.selectedCells.length;
       state.save();
       this.selectedCells = [];
       this.renderGrid();
-      showToast(`🌱 Посажено: ${this.selectedCells.length} ${cropConfig.icon}`);
+      showToast(`🌱 Посажено: ${count} ${cropConfig.icon}`);
     } else {
       showToast(`❌ Нужно ${totalCost}💰 (не хватает)`);
     }
@@ -110,7 +116,10 @@ const game = {
 
   renderShop() {
     const list = document.getElementById('shop-list');
-    if (!list) return;
+    if (!list) {
+      console.error('Shop list not found');
+      return;
+    }
     list.innerHTML = '';
 
     if (this.mode === 'plant') {
@@ -118,8 +127,10 @@ const game = {
         const div = document.createElement('div');
         div.className = 'shop-item';
         div.innerHTML = `
-          <span>${val.icon} ${val.name}</span>
-          <div style="font-size: 12px; color: #888;">${val.time}с | +${val.sell}💰</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-start;">
+            <span>${val.icon} ${val.name}</span>
+            <div style="font-size: 12px; color: #888;">${val.time}с | +${val.sell}💰</div>
+          </div>
           <button class="btn-vk primary" onclick="game.selectCrop('${key}', this)">${val.cost} 💰</button>
         `;
         list.appendChild(div);
@@ -138,11 +149,13 @@ const game = {
   },
 
   selectCrop(crop, btn) {
+    console.log('Select crop:', crop, 'mode:', this.mode);
     this.selectedCrop = crop;
     this.selectedBuild = null;
     
     if (this.mode === 'select') {
       this.plantSelected();
+      document.getElementById('shopModal').style.display = 'none';
     } else {
       document.getElementById('shopModal').style.display = 'none';
       showToast(`Выбрано: ${CONFIG.crops[crop].icon} ${CONFIG.crops[crop].name}`);
@@ -156,9 +169,15 @@ const game = {
     showToast(`Выбрано: ${CONFIG.buildings[build].icon} ${CONFIG.buildings[build].name}`);
   },
 
-  showShop() { document.getElementById('shopModal').style.display = 'flex'; },
+  showShop() { 
+    console.log('Show shop');
+    document.getElementById('shopModal').style.display = 'flex'; 
+  },
+  
   closeShop(e) { 
-    if (!e.target.classList.contains('modal-card')) document.getElementById('shopModal').style.display = 'none'; 
+    if (!e.target.classList.contains('modal-card')) {
+      document.getElementById('shopModal').style.display = 'none'; 
+    }
   },
 
   buyLand() {
@@ -184,17 +203,19 @@ const game = {
   },
 
   handleCellClick(index) {
-    // Режим ВЫДЕЛЕНИЯ
+    console.log('Cell clicked:', index, 'mode:', this.mode);
+    
     if (this.mode === 'select') {
       const cell = state.data.cells[index];
       
-      // Можно выделить только пустую клетку
       if (!cell) {
         const cellIndex = this.selectedCells.indexOf(index);
         if (cellIndex > -1) {
-          this.selectedCells.splice(cellIndex, 1); // Убрать выделение
+          this.selectedCells.splice(cellIndex, 1);
+          console.log('Deselected cell:', index);
         } else {
-          this.selectedCells.push(index); // Добавить выделение
+          this.selectedCells.push(index);
+          console.log('Selected cell:', index, 'total:', this.selectedCells.length);
         }
         this.renderGrid();
         showToast(`📋 Выбрано: ${this.selectedCells.length} грядок`);
@@ -202,7 +223,6 @@ const game = {
       return;
     }
 
-    // Режим СТРОЙКИ
     if (this.mode === 'build') {
       const cell = state.data.cells[index];
       if (!cell) {
@@ -222,7 +242,6 @@ const game = {
       return;
     }
 
-    // Режим ПОСАДКИ (одиночной)
     const cell = state.data.cells[index];
     if (!cell) {
       const cropConfig = CONFIG.crops[this.selectedCrop];
@@ -253,7 +272,10 @@ const game = {
 
   renderGrid() {
     const grid = document.getElementById('grid');
-    if (!grid) return;
+    if (!grid) {
+      console.error('Grid not found');
+      return;
+    }
     
     grid.style.gridTemplateColumns = 'repeat(5, 1fr)';
     grid.innerHTML = '';
@@ -266,7 +288,6 @@ const game = {
       const div = document.createElement('div');
       div.className = 'cell';
       
-      // Подсветка ВЫДЕЛЕННЫХ клеток
       if (this.selectedCells.includes(i)) {
         div.style.boxShadow = '0 0 0 3px #10b981, inset 2px 2px 4px rgba(255,255,255,0.4)';
         div.style.background = 'rgba(16, 185, 129, 0.3)';
