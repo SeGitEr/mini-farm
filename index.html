@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Мини-Ферма</title>
+  <script src="https://unpkg.com/@vkontakte/vk-bridge@2.10.0/dist/browser.min.js"></script>
+  <style>
+    :root { --soil: #8b6b4a; --cell-bg: #d4c4a3; --ready: #ffd700; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4e8; margin: 0; padding: 12px; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: white; padding: 10px 14px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .coins { font-size: 20px; font-weight: 700; color: #2e7d32; display: flex; align-items: center; gap: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 340px; margin: 0 auto; padding: 10px; background: var(--soil); border-radius: 14px; box-shadow: inset 0 4px 12px rgba(0,0,0,0.2); }
+    .cell { background: var(--cell-bg); border-radius: 10px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: background 0.2s; overflow: hidden; }
+    .cell:active { background: #c9b896; }
+    .plant { width: 80%; height: 80%; object-fit: contain; pointer-events: none; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .plant.ready { animation: pulse 1.5s infinite ease-in-out; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15) rotate(2deg); } }
+    .growth-bar { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 70%; height: 5px; background: rgba(0,0,0,0.2); border-radius: 3px; overflow: hidden; }
+    .growth-progress { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s linear; }
+    .controls { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .btn { padding: 10px 16px; border: none; border-radius: 10px; background: #4caf50; color: white; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.96); }
+    .btn.ads { background: #ff9800; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+    .modal-content { background: white; padding: 20px; border-radius: 16px; max-width: 280px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .close { margin-top: 12px; background: #f44336; }
+    .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .shop-item:last-child { border: none; }
+    .crop-btn { background: #e8f5e9; color: #2e7d32; border: 1px solid #4caf50; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+    .crop-btn.active { background: #4caf50; color: white; }
+    /* Тост-уведомления */
+    #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+    .toast { background: rgba(0,0,0,0.85); color: white; padding: 10px 16px; border-radius: 8px; font-size: 14px; animation: fadeIn 0.3s, fadeOut 0.3s 2.7s forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="coins">💰 <span id="coinCount">100</span></div>
+    <button class="btn" onclick="showShop()">🛒 Магазин</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="controls">
+    <button class="btn ads" id="adBtn" onclick="watchAd()">📺 Ускорить рост (+50💰)</button>
+    <button class="btn" onclick="resetGame()">🔄 Сброс</button>
+  </div>
+
+  <div class="modal" id="shopModal">
+    <div class="modal-content">
+      <h3>🌱 Выбор семян</h3>
+      <div class="shop-item"><span>🌾 Пшеница (10 монет)</span><button class="crop-btn active" onclick="selectCrop('wheat')">Выбрать</button></div>
+      <div class="shop-item"><span>🥕 Морковь (20 монет)</span><button class="crop-btn" onclick="selectCrop('carrot')">Выбрать</button></div>
+      <div class="shop-item"><span>🍅 Томат (35 монет)</span><button class="crop-btn" onclick="selectCrop('tomato')">Выбрать</button></div>
+      <button class="btn close" onclick="closeShop()">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+    // 1. Инициализация VK Bridge
+    const bridge = window.vkBridge;
+    bridge.send('VKWebAppInit').catch(() => console.log('Локальный режим'));
+
+    // 2. Конфигурация
+    const CROPS = {
+      wheat: { cost: 10, time: 10, sell: 15, sprites: ['assets/wheat/seed.png','assets/wheat/sprout.png','assets/wheat/grow.png','assets/wheat/ready.png'] },
+      carrot: { cost: 20, time: 20, sell: 30, sprites: ['assets/carrot/seed.png','assets/carrot/sprout.png','assets/carrot/grow.png','assets/carrot/ready.png'] },
+      tomato: { cost: 35, time: 35, sell: 55, sprites: ['assets/tomato/seed.png','assets/tomato/sprout.png','assets/tomato/grow.png','assets/tomato/ready.png'] }
+    };
+    let selectedCrop = 'wheat';
+    let gameState = loadState();
+    let adState = { cooldown: false, timer: null, remaining: 0 };
+
+    // 3. Сохранение / Загрузка
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem('miniFarmState')) || { coins: 100, cells: Array(25).fill(null) }; }
+      catch { return { coins: 100, cells: Array(25).fill(null) }; }
+    }
+    function saveState() { localStorage.setItem('miniFarmState', JSON.stringify(gameState)); }
+
+    // 4. Рендер
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      gameState.cells.forEach((cell, i) => {
+        const div = document.createElement('div');
+        div.className = 'cell';
+        div.onclick = () => handleCellClick(i);
+        if (cell) {
+          const elapsed = Math.floor((Date.now() - cell.plantedAt) / 1000);
+          const progress = Math.min(elapsed / CROPS[cell.type].time, 1);
+          const stage = Math.min(Math.floor(progress * 4), 3);
+          const img = document.createElement('img');
+          img.className = 'plant' + (progress >= 1 ? ' ready' : '');
+          img.src = CROPS[cell.type].sprites[stage];
+          img.alt = cell.type;
+          img.onerror = () => { img.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><text y="20" font-size="20">${progress<1?'🌱':'🌾'}</text></svg>`; };
+          const bar = document.createElement('div');
+          bar.className = 'growth-bar';
+          const prog = document.createElement('div');
+          prog.className = 'growth-progress';
+          prog.style.width = (progress * 100) + '%';
+          bar.appendChild(prog);
+          div.appendChild(img);
+          div.appendChild(bar);
+        } else { div.textContent = '➕'; }
+        grid.appendChild(div);
+      });
+      document.getElementById('coinCount').textContent = gameState.coins;
+    }
+
+    // 5. Логика клика
+    function handleCellClick(index) {
+      const cell = gameState.cells[index];
+      if (!cell) {
+        if (gameState.coins >= CROPS[selectedCrop].cost) {
+          gameState.coins -= CROPS[selectedCrop].cost;
+          gameState.cells[index] = { type: selectedCrop, plantedAt: Date.now() };
+          saveState(); renderGrid();
+        } else { showToast('❌ Недостаточно монет!'); }
+      } else {
+        const elapsed = (Date.now() - cell.plantedAt) / 1000;
+        if (elapsed >= CROPS[cell.type].time) {
+          gameState.coins += CROPS[cell.type].sell;
+          gameState.cells[index] = null;
+          saveState(); renderGrid();
+        } else { showToast(`⏳ Ещё ${Math.ceil(CROPS[cell.type].time - elapsed)} сек`); }
+      }
+    }
+
+    // 6. Магазин
+    function showShop() { document.getElementById('shopModal').style.display = 'flex'; }
+    function closeShop() { document.getElementById('shopModal').style.display = 'none'; }
+    function selectCrop(crop) {
+      selectedCrop = crop;
+      document.querySelectorAll('.crop-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // 7. 🔥 РЕАЛЬНАЯ РЕКЛАМА ВК
+    async function watchAd() {
+      if (!window.vkBridge) { showToast('📱 Реклама доступна только внутри ВКонтакте'); return; }
+      if (adState.cooldown) { showToast(`⏳ Подождите ещё ${adState.remaining} сек`); return; }
+
+      const btn = document.getElementById('adBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Загрузка...';
+
+      try {
+        // Вызов rewarded-рекламы
+        const res = await bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
+        if (res.result === true) {
+          gameState.coins += 50;
+          saveState();
+          renderGrid();
+          showToast('🎉 +50 монет за просмотр!');
+          startCooldown(60); // 60 секунд кулдаун
+        } else {
+          showToast('❌ Реклама закрыта без вознаграждения');
+          resetAdBtn();
+        }
+      } catch (err) {
+        console.warn('Ad error:', err);
+        showToast('⚠️ Не удалось загрузить рекламу');
+        resetAdBtn();
+      }
+    }
+
+    function startCooldown(seconds) {
+      adState.cooldown = true;
+      adState.remaining = seconds;
+      const btn = document.getElementById('adBtn');
+      
+      adState.timer = setInterval(() => {
+        adState.remaining--;
+        btn.textContent = `⏳ Ждите ${adState.remaining}с`;
+        if (adState.remaining <= 0) {
+          clearInterval(adState.timer);
+          adState.cooldown = false;
+          btn.disabled = false;
+          btn.textContent = '📺 Ускорить рост (+50💰)';
+        }
+      }, 1000);
+    }
+
+    function resetAdBtn() {
+      const btn = document.getElementById('adBtn');
+      btn.disabled = false;
+      btn.textContent = '📺 Ускорить рост (+50💰)';
+    }
+
+    // 8. Сброс
+    function resetGame() {
+      if (confirm('🔄 Сбросить прогресс?')) {
+        localStorage.removeItem('miniFarmState');
+        gameState = loadState(); renderGrid();
+        showToast('🗑️ Прогресс сброшен');
+      }
+    }
+
+    // 9. Утилиты
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // 10. Авто-обновление
+    setInterval(renderGrid, 500);
+    renderGrid();
+  </script>
+</body>
+</html>
