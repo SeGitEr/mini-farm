@@ -4,36 +4,48 @@ const ads = {
   timer: null,
 
   async watchAd() {
-    if (!window.vkBridge) { showToast('📱 Только в ВК'); return; }
-    if (this.cooldown) { showToast(`⏳ Жди ${this.remaining}с`); return; }
+    // 1. Если кулдаун активен — не даем нажать
+    if (this.cooldown) {
+      showToast(`⏳ Подождите ещё ${this.remaining} сек`);
+      return;
+    }
 
+    // 2. Визуальный эффект нажатия
     const btn = document.getElementById('adBtn');
     btn.disabled = true;
     btn.textContent = '⏳...';
 
-    try {
-      const res = await vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' });
-      if (res.result) {
-        state.data.coins += 50;
-        state.save();
-        showToast('🎉 +50 монет');
-        this.startCooldown(60);
-      } else { this.resetBtn(); }
-    } catch (e) { 
-      console.error(e); 
-      this.resetBtn(); 
-      showToast('⚠️ Ошибка'); 
+    // 3. ИМИТАЦИЯ (Вместо реальной рекламы)
+    // Мы просто сразу даем награду через полсекунды (для красоты)
+    setTimeout(() => {
+        this.grantReward();
+        this.startCooldown(60); // Ставим 60 секунд ожидания
+        this.resetBtn();
+    }, 500); 
+  },
+
+  // Функция выдачи награды
+  grantReward() {
+    state.data.coins += 50;
+    state.save();
+    showToast('🎉 +50 монет (Тест)');
+    
+    // Обновляем интерфейс игры (чтобы счетчик обновился)
+    if (typeof game !== 'undefined' && game.renderGrid) {
+        game.renderGrid();
     }
   },
 
-  startCooldown(sec) {
+  // Запуск таймера
+  startCooldown(seconds) {
     this.cooldown = true;
-    this.remaining = sec;
+    this.remaining = seconds;
     const btn = document.getElementById('adBtn');
     
     this.timer = setInterval(() => {
       this.remaining--;
       btn.textContent = `⏳ ${this.remaining}с`;
+      
       if (this.remaining <= 0) {
         clearInterval(this.timer);
         this.cooldown = false;
@@ -42,9 +54,12 @@ const ads = {
     }, 1000);
   },
 
+  // Сброс кнопки
   resetBtn() {
     const btn = document.getElementById('adBtn');
-    btn.disabled = false;
-    btn.textContent = '📺 Реклама (+50)';
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = '📺 Реклама (+50)';
+    }
   }
 };
