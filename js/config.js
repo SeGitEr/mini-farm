@@ -1,9 +1,19 @@
 const CONFIG = {
+  // Растения (то, что растёт и даёт доход)
   crops: {
-    wheat: { cost: 10, time: 10, sell: 15 },
-    carrot: { cost: 20, time: 20, sell: 30 },
-    tomato: { cost: 35, time: 35, sell: 55 }
+    wheat: { cost: 10, time: 10, sell: 15, icon: '🌾' },
+    carrot: { cost: 20, time: 20, sell: 30, icon: '🥕' },
+    tomato: { cost: 35, time: 35, sell: 55, icon: '🍅' }
   },
+  
+  // Строения и Декор (то, что стоит вечно)
+  buildings: {
+    fence: { cost: 5, type: 'decor', icon: '🪵' }, // Забор
+    tree:  { cost: 15, type: 'decor', icon: '🌳' }, // Дерево
+    bush:  { cost: 8, type: 'decor', icon: '🌿' }   // Куст
+  },
+
+  // SVG графика (оставляем как была, она работает)
   svg: {
     wheat: {
       stages: [
