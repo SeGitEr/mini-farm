@@ -232,3 +232,18 @@ body {
 
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeOut { to { opacity: 0; } }
+
+/* Декорации */
+.decoration {
+  position: fixed;
+  font-size: 80px; /* Большие деревья */
+  z-index: -1; /* Чтобы были ПОД интерфейсом, но НАД фоном */
+  opacity: 0.8;
+  pointer-events: none; /* Чтобы нельзя было кликнуть */
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+}
+
+.tree-tl { top: 10px; left: 10px; transform: rotate(-15deg); }
+.tree-tr { top: 10px; right: 10px; transform: rotate(15deg) scaleX(-1); }
+.tree-bl { bottom: 10px; left: 10px; transform: rotate(10deg); }
+.tree-br { bottom: 10px; right: 10px; transform: rotate(-10deg) scaleX(-1); }
