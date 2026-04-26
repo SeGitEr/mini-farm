@@ -9,39 +9,42 @@
 </head>
 <body>
 
-  <!-- Шапка с монетами -->
   <div class="header">
     <div class="balance">
       <svg class="coin-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9h6M9 15h6" stroke="#fff" stroke-width="2.5"/></svg>
       <span id="coinCount">100</span>
     </div>
-    <button class="btn-vk secondary" style="width: auto; padding: 10px 16px;" onclick="game.showShop()">🛒 Магазин</button>
+    <!-- Новые кнопки режимов -->
+    <div style="display: flex; gap: 5px;">
+      <button class="btn-vk secondary" id="modePlantBtn" style="width:auto; padding: 8px;" onclick="game.setMode('plant')">🌱</button>
+      <button class="btn-vk secondary" id="modeBuildBtn" style="width:auto; padding: 8px;" onclick="game.setMode('build')">🔨</button>
+    </div>
   </div>
 
-  <!-- Игровое поле -->
   <div class="farm-container">
     <div class="grid" id="grid"></div>
   </div>
 
-  <!-- Кнопки управления -->
+  <!-- Кнопка расширения -->
+  <div style="margin-top: 10px; width: 100%; max-width: 380px;">
+    <button class="btn-vk secondary" id="buyLandBtn" style="width: 100%;" onclick="game.buyLand()">🌍 Купить землю (100💰)</button>
+  </div>
+
   <div class="controls">
     <button class="btn-vk primary" id="adBtn" onclick="ads.watchAd()">📺 Реклама (+50)</button>
     <button class="btn-vk secondary" onclick="state.resetGame()">🔄 Сброс</button>
   </div>
 
-  <!-- Магазин (Модальное окно) -->
   <div class="modal-overlay" id="shopModal" onclick="game.closeShop(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
-      <h3 style="margin: 0 0 20px;">🌱 Семена</h3>
+      <h3 style="margin: 0 0 20px;" id="shopTitle">Магазин</h3>
       <div id="shop-list"></div>
       <button class="btn-vk secondary" style="width: 100%; margin-top: 16px;" onclick="game.closeShop({target: document.getElementById('shopModal')})">Закрыть</button>
     </div>
   </div>
 
-  <!-- Уведомления -->
   <div id="toast-container"></div>
 
-  <!-- Логика -->
   <script src="js/config.js"></script>
   <script src="js/state.js"></script>
   <script src="js/ads.js"></script>
