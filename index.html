@@ -14,7 +14,12 @@
       <svg class="coin-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 9h6M9 15h6" stroke="#fff" stroke-width="2.5"/></svg>
       <span id="coinCount">100</span>
     </div>
-    <div style="display: flex; gap: 5px;">
+    
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <!-- КНОПКА МАГАЗИНА (ВЕРНУЛ ЕЁ!) -->
+      <button class="btn-vk secondary" style="width: auto; padding: 8px 12px;" onclick="game.showShop()">🛒</button>
+      
+      <!-- Кнопки режимов -->
       <button class="btn-vk secondary" id="modePlantBtn" style="width:auto; padding: 8px;" onclick="game.setMode('plant')">🌱</button>
       <button class="btn-vk secondary" id="modeBuildBtn" style="width:auto; padding: 8px;" onclick="game.setMode('build')">🔨</button>
       <button class="btn-vk secondary" id="modeSelectBtn" style="width:auto; padding: 8px;" onclick="game.setMode('select')">📋</button>
@@ -25,7 +30,7 @@
     <div class="grid" id="grid"></div>
   </div>
 
-  <div style="margin-top: 10px; width: 100%; max-width: 380px; display: flex; gap: 10px;">
+  <div style="margin-top: 15px; width: 100%; max-width: 380px; display: flex; gap: 10px;">
     <button class="btn-vk secondary" id="buyLandBtn" style="flex: 1;" onclick="game.buyLand()">🌍 Земля (100💰)</button>
     <button class="btn-vk primary" id="harvestAllBtn" style="flex: 1;" onclick="game.harvestAll()">🌾 Собрать всё</button>
   </div>
@@ -35,9 +40,10 @@
     <button class="btn-vk secondary" onclick="state.resetGame()">🔄 Сброс</button>
   </div>
 
+  <!-- МОДАЛЬНОЕ ОКНО МАГАЗИНА (ВЕРНУЛ ЕГО!) -->
   <div class="modal-overlay" id="shopModal" onclick="game.closeShop(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
-      <h3 style="margin: 0 0 20px;" id="shopTitle">Магазин</h3>
+      <h3 style="margin: 0 0 20px;">🏪 Магазин</h3>
       <div id="shop-list"></div>
       <button class="btn-vk secondary" style="width: 100%; margin-top: 16px;" onclick="game.closeShop({target: document.getElementById('shopModal')})">Закрыть</button>
     </div>
